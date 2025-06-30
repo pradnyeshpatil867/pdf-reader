@@ -7,7 +7,7 @@ import * as pdfjs from 'pdfjs-dist';
 import '@react-pdf-viewer/core/lib/styles/index.css';
 import '@react-pdf-viewer/search/lib/styles/index.css';
 
-import samplePDF from '../static/lungenentzuendung_06RZ.pdf';
+import samplePDF from '../static/053-007l_S1_Nackenschmerz_2017-01-abgelaufen.pdf';
 
 const PDFFile = () => {
     const [allTextSpans, setAllTextSpans] = useState([]);
@@ -77,9 +77,7 @@ const PDFFile = () => {
         // Remove hyphenation artifacts where words are split across lines
         let normalized = text
             // Remove hyphens at the end of words followed by space and lowercase letter
-            .replace(/([a-zA-ZäöüÄÖÜß])-\s+([a-zA-ZäöüÄÖÜß])/g, '$1$2')
-            // Handle case where hyphen is followed immediately by continuation (no space)
-            .replace(/([a-zA-ZäöüÄÖÜß])-([a-zA-ZäöüÄÖÜß])/g, '$1$2')
+            .replace(/([a-zA-Z0-9äöüÄÖÜß])\s*-\s*([a-zA-Z0-9äöüÄÖÜß])/g, '$1$2')
             // Normalize multiple spaces to single space
             .replace(/\s+/g, ' ')
             .trim();
