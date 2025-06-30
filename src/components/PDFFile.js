@@ -362,6 +362,35 @@ const PDFFile = () => {
         extractAllTextSpans();
     }, []);
 
+    useEffect(() => {
+        const highlightSpan = (pageIdx, spanIdx) => {
+            const textLayer = document.querySelector(`[data-testid="core__text-layer-${pageIdx}"]`);
+            if (!textLayer) {
+                console.log(`Text layer not found for page ${pageIdx}`);
+                return;
+            }
+            const spans = textLayer.querySelectorAll('span');
+            console.log(`Found ${spans.length} spans on page ${pageIdx}`);
+            if (spanIdx >= 0 && spanIdx < spans.length) {
+                const targetSpan = spans[spanIdx];
+                targetSpan.style.background = 'yellow';
+                targetSpan.style.borderRadius = '4px';
+                console.log(`✅ Highlighted span ${spanIdx} on page ${pageIdx}`);
+                console.log(`📝 Text content: "${targetSpan.textContent}"`);
+                console.log(`🎨 Applied styles: background=yellow, borderRadius=4px`);
+            } else {
+                console.log(`❌ Span index ${spanIdx} out of range (0-${spans.length - 1})`);
+            }
+        };
+        
+        // Try highlighting with a delay to ensure DOM is ready
+        const timeout = setTimeout(() => {
+            highlightSpan(2, 17); // Page 2 (0-based), span 99
+        }, 1000);
+        
+        return () => clearTimeout(timeout);
+    }, [allTextSpans]);
+
     // Test with example sentences that should exist in the PDF
     const testSentences = [
         "sich um eine akute oder chronische Entzündung des Lungengewebes. Die Krankheit kommt in jeder Altersgruppe vor, besonders häufig",
