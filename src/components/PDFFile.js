@@ -171,6 +171,8 @@ const PDFFile = () => {
         return sentencePartTexts;
     };
 
+    
+
     // Find ONLY the consecutive spans that form the provided sentence
     const findConsecutiveSpansForSentence = (sentence) => {
         console.log("inside findConsecutiveSpansForSentence");
@@ -367,56 +369,75 @@ const PDFFile = () => {
     }, []);
 
     useEffect(() => {
-        const highlightSpan = (pageIdx, spanIdx, startCharIdx = 0, endCharIdx = null) => {
-            const textLayer = document.querySelector(`[data-testid="core__text-layer-${pageIdx}"]`);
-            if (!textLayer) {
-                console.log(`Text layer not found for page ${pageIdx}`);
+        const highlightSpan = (spanIdx, startCharIdx = 0, endCharIdx = null) => {
+            // Find all text layers across all pages
+            const textLayers = document.querySelectorAll('[data-testid^="core__text-layer-"]');
+            if (textLayers.length === 0) {
+                console.log('No text layers found');
                 return;
             }
-            const spans = textLayer.querySelectorAll('span');
-            console.log(`Found ${spans.length} spans on page ${pageIdx}`);
-            if (spanIdx >= 0 && spanIdx < spans.length) {
-                const targetSpan = spans[spanIdx];
-                const spanText = targetSpan.textContent;
+            
+            let targetSpan = null;
+            let currentSpanIndex = 0;
+            let foundPageIdx = -1;
+            
+            // Iterate through all pages to find the span with the given index
+            for (let pageIdx = 0; pageIdx < textLayers.length; pageIdx++) {
+                const textLayer = textLayers[pageIdx];
+                const spans = textLayer.querySelectorAll('span');
                 
-                // If no endCharIdx specified, highlight the entire span
-                if (endCharIdx === null) {
-                    endCharIdx = spanText.length;
+                if (currentSpanIndex + spans.length > spanIdx) {
+                    // Found the page containing our target span
+                    const localSpanIdx = spanIdx - currentSpanIndex;
+                    targetSpan = spans[localSpanIdx];
+                    foundPageIdx = pageIdx;
+                    break;
                 }
-                
-                // Validate character indices
-                if (startCharIdx < 0 || endCharIdx > spanText.length || startCharIdx >= endCharIdx) {
-                    console.log(`❌ Invalid character indices: ${startCharIdx}-${endCharIdx} for text length ${spanText.length}`);
-                    return;
-                }
-                
-                // Create a wrapper span to highlight only the specified portion
-                const wrapper = document.createElement('span');
-                wrapper.style.background = 'yellow';
-                wrapper.style.borderRadius = '4px';
-                
-                const beforeText = spanText.substring(0, startCharIdx);
-                const highlightedText = spanText.substring(startCharIdx, endCharIdx);
-                const afterText = spanText.substring(endCharIdx);
-                
-                wrapper.innerHTML = `${beforeText}<span style="background: yellow; border-radius: 4px;">${highlightedText}</span>${afterText}`;
-                
-                // Replace the original span content
-                targetSpan.innerHTML = wrapper.innerHTML;
-                
-                console.log(`✅ Highlighted span ${spanIdx} on page ${pageIdx}, characters ${startCharIdx}-${endCharIdx}`);
-                console.log(`📝 Text content: "${spanText}"`);
-                console.log(`🎯 Highlighted portion: "${highlightedText}"`);
-                console.log(`🎨 Applied styles: background=yellow, borderRadius=4px`);
-            } else {
-                console.log(`❌ Span index ${spanIdx} out of range (0-${spans.length - 1})`);
+                currentSpanIndex += spans.length;
             }
+            
+            if (!targetSpan) {
+                console.log(`❌ Span index ${spanIdx} not found across all pages`);
+                return;
+            }
+            
+            const spanText = targetSpan.textContent;
+            
+            // If no endCharIdx specified, highlight the entire span
+            if (endCharIdx === null) {
+                endCharIdx = spanText.length;
+            }
+            
+            // Validate character indices
+            if (startCharIdx < 0 || endCharIdx > spanText.length || startCharIdx >= endCharIdx) {
+                console.log(`❌ Invalid character indices: ${startCharIdx}-${endCharIdx} for text length ${spanText.length}`);
+                return;
+            }
+            
+            // Create a wrapper span to highlight only the specified portion
+            const wrapper = document.createElement('span');
+            wrapper.style.background = 'yellow';
+            wrapper.style.borderRadius = '4px';
+            
+            const beforeText = spanText.substring(0, startCharIdx);
+            const highlightedText = spanText.substring(startCharIdx, endCharIdx);
+            const afterText = spanText.substring(endCharIdx);
+            
+            wrapper.innerHTML = `${beforeText}<span style="background: yellow; border-radius: 4px;">${highlightedText}</span>${afterText}`;
+            
+            // Replace the original span content
+            targetSpan.innerHTML = wrapper.innerHTML;
+            
+            console.log(`✅ Highlighted span ${spanIdx} on page ${foundPageIdx}, characters ${startCharIdx}-${endCharIdx}`);
+            console.log(`📝 Text content: "${spanText}"`);
+            console.log(`🎯 Highlighted portion: "${highlightedText}"`);
+            console.log(`🎨 Applied styles: background=yellow, borderRadius=4px`);
         };
         
         // Try highlighting with a delay to ensure DOM is ready
         const timeout = setTimeout(() => {
-            highlightSpan(1, 87,0,80); // Page 2 (0-based), span 17, characters 0-5
-            // highlightSpan(2, 21,); // Page 2 (0-based), span 17, characters 0-5
+            highlightSpan(95); // Span 89 across all pages, characters 0-5
+            // highlightSpan(21); // Span 21 across all pages
         }, 1000);
         
         return () => clearTimeout(timeout);
