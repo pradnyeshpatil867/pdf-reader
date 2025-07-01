@@ -223,10 +223,10 @@ const PDFFile = () => {
                 
                 // Clean up the concatenated text for comparison using normalization that handles hyphens
                 const cleanConcatenated = normalizeTextForMatching(concatenatedText);
-                console.log("cleanConcatenated: #", cleanConcatenated, "#");
+                // console.log("cleanConcatenated: #", cleanConcatenated, "#");
                 // console.log('🔄 Clean concatenated text:', cleanConcatenated);
                 const cleanTarget = normalizeTextForMatching(normalizedSentence);
-                console.log('🔄 Clean target text: #', cleanTarget, "#");
+                // console.log('🔄 Clean target text: #', cleanTarget, "#");
                 // Check if we found the exact sentence
                 if (cleanConcatenated === cleanTarget) {
                     console.log(`✅ EXACT MATCH FOUND! Starting at span index ${startIndex}`);
@@ -363,7 +363,7 @@ const PDFFile = () => {
     }, []);
 
     useEffect(() => {
-        const highlightSpan = (pageIdx, spanIdx) => {
+        const highlightSpan = (pageIdx, spanIdx, startCharIdx = 0, endCharIdx = null) => {
             const textLayer = document.querySelector(`[data-testid="core__text-layer-${pageIdx}"]`);
             if (!textLayer) {
                 console.log(`Text layer not found for page ${pageIdx}`);
@@ -373,10 +373,36 @@ const PDFFile = () => {
             console.log(`Found ${spans.length} spans on page ${pageIdx}`);
             if (spanIdx >= 0 && spanIdx < spans.length) {
                 const targetSpan = spans[spanIdx];
-                targetSpan.style.background = 'yellow';
-                targetSpan.style.borderRadius = '4px';
-                console.log(`✅ Highlighted span ${spanIdx} on page ${pageIdx}`);
-                console.log(`📝 Text content: "${targetSpan.textContent}"`);
+                const spanText = targetSpan.textContent;
+                
+                // If no endCharIdx specified, highlight the entire span
+                if (endCharIdx === null) {
+                    endCharIdx = spanText.length;
+                }
+                
+                // Validate character indices
+                if (startCharIdx < 0 || endCharIdx > spanText.length || startCharIdx >= endCharIdx) {
+                    console.log(`❌ Invalid character indices: ${startCharIdx}-${endCharIdx} for text length ${spanText.length}`);
+                    return;
+                }
+                
+                // Create a wrapper span to highlight only the specified portion
+                const wrapper = document.createElement('span');
+                wrapper.style.background = 'yellow';
+                wrapper.style.borderRadius = '4px';
+                
+                const beforeText = spanText.substring(0, startCharIdx);
+                const highlightedText = spanText.substring(startCharIdx, endCharIdx);
+                const afterText = spanText.substring(endCharIdx);
+                
+                wrapper.innerHTML = `${beforeText}<span style="background: yellow; border-radius: 4px;">${highlightedText}</span>${afterText}`;
+                
+                // Replace the original span content
+                targetSpan.innerHTML = wrapper.innerHTML;
+                
+                console.log(`✅ Highlighted span ${spanIdx} on page ${pageIdx}, characters ${startCharIdx}-${endCharIdx}`);
+                console.log(`📝 Text content: "${spanText}"`);
+                console.log(`🎯 Highlighted portion: "${highlightedText}"`);
                 console.log(`🎨 Applied styles: background=yellow, borderRadius=4px`);
             } else {
                 console.log(`❌ Span index ${spanIdx} out of range (0-${spans.length - 1})`);
@@ -385,7 +411,7 @@ const PDFFile = () => {
         
         // Try highlighting with a delay to ensure DOM is ready
         const timeout = setTimeout(() => {
-            highlightSpan(2, 17); // Page 2 (0-based), span 99
+            highlightSpan(2, 17); // Page 2 (0-based), span 17, characters 0-5
         }, 1000);
         
         return () => clearTimeout(timeout);
