@@ -161,6 +161,10 @@ const PDFFile = () => {
                 
                 const relevantPart = spanPos.originalText.substring(relativeStart, relativeEnd);
                 sentencePartTexts.push(relevantPart);
+                
+                // Log page number, span number, start and end index
+                const span = spans[spanPos.spanIndex];
+                console.log(`📄 Page: ${span.page}, Span: ${span.index}, Start: ${relativeStart}, End: ${relativeEnd}, Text: "${relevantPart}"`);
             }
         });
         
@@ -411,7 +415,8 @@ const PDFFile = () => {
         
         // Try highlighting with a delay to ensure DOM is ready
         const timeout = setTimeout(() => {
-            highlightSpan(2, 17); // Page 2 (0-based), span 17, characters 0-5
+            highlightSpan(1, 87,0,80); // Page 2 (0-based), span 17, characters 0-5
+            // highlightSpan(2, 21,); // Page 2 (0-based), span 17, characters 0-5
         }, 1000);
         
         return () => clearTimeout(timeout);
