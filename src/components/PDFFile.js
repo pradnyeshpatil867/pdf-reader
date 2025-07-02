@@ -204,284 +204,94 @@ const PDFFile = () => {
     };
 
     // Helper function to extract only the sentence parts from spans
-    const extractSentencePartsFromSpans = (spans, targetSentence) => {
-        console.log("inside extractSentencePartsFromSpans");
+    // const extractSentencePartsFromSpans = (spans, targetSentence) => {
+    //     console.log("inside extractSentencePartsFromSpans");
 
-        console.log("spans: ", spans);
-        console.log("targetSentence: ", targetSentence);
-        if (!spans || spans.length === 0) return [];
+    //     console.log("spans: ", spans);
+    //     console.log("targetSentence: ", targetSentence);
+    //     if (!spans || spans.length === 0) return [];
         
-        // Concatenate all span texts to recreate the full text
-        let fullText = '';
-        const spanPositions = []; // Track where each span starts and ends in the full text
+    //     // Concatenate all span texts to recreate the full text
+    //     let fullText = '';
+    //     const spanPositions = []; // Track where each span starts and ends in the full text
         
-        spans.forEach((span, index) => {
-            const startPos = fullText.length;
-            if (fullText.length > 0) {
+    //     spans.forEach((span, index) => {
+    //         const startPos = fullText.length;
+    //         if (fullText.length > 0) {
                 
-                // Add space if needed between spans
-                const needsSpace = !fullText.endsWith(' ') && !span.text.startsWith(' ');
-                if (needsSpace) {
-                    fullText += ' ';
-                }
-            }
-            const textStartPos = fullText.length;
-            fullText += span.text;
-            const endPos = fullText.length;
+    //             // Add space if needed between spans
+    //             const needsSpace = !fullText.endsWith(' ') && !span.text.startsWith(' ');
+    //             if (needsSpace) {
+    //                 fullText += ' ';
+    //             }
+    //         }
+    //         const textStartPos = fullText.length;
+    //         fullText += span.text;
+    //         const endPos = fullText.length;
             
-            spanPositions.push({
-                spanIndex: index,
-                textStartPos: textStartPos,
-                textEndPos: endPos,
-                originalText: span.text
-            });
-        });
+    //         spanPositions.push({
+    //             spanIndex: index,
+    //             textStartPos: textStartPos,
+    //             textEndPos: endPos,
+    //             originalText: span.text
+    //         });
+    //     });
 
         
-        console.log("spanPositions: ", spanPositions);
-        console.log("fullText: ", fullText);
-        // Clean up texts for comparison using the new normalization
-        const cleanFullText = normalizeTextForMatching(fullText);
-        console.log("cleanFullText: ", cleanFullText);
-        const cleanTargetSentence = normalizeTextForMatching(targetSentence);
-        console.log("cleanTargetSentence: ", cleanTargetSentence);
+    //     console.log("spanPositions: ", spanPositions);
+    //     console.log("fullText: ", fullText);
+    //     // Clean up texts for comparison using the new normalization
+    //     const cleanFullText = normalizeTextForMatching(fullText);
+    //     console.log("cleanFullText: ", cleanFullText);
+    //     const cleanTargetSentence = normalizeTextForMatching(targetSentence);
+    //     console.log("cleanTargetSentence: ", cleanTargetSentence);
         
-        // Find where the target sentence appears in the full text
-        const sentenceStartIndex = cleanFullText.indexOf(cleanTargetSentence);
-        if (sentenceStartIndex === -1) {
-            console.log('⚠️ Target sentence not found in concatenated spans');
-            console.log(`   Full text (normalized): "${cleanFullText}"`);
-            console.log(`   Target (normalized): "${cleanTargetSentence}"`);
-            return spans.map(span => span.text); // Return original texts as fallback
-        }
+    //     // Find where the target sentence appears in the full text
+    //     const sentenceStartIndex = cleanFullText.indexOf(cleanTargetSentence);
+    //     if (sentenceStartIndex === -1) {
+    //         console.log('⚠️ Target sentence not found in concatenated spans');
+    //         console.log(`   Full text (normalized): "${cleanFullText}"`);
+    //         console.log(`   Target (normalized): "${cleanTargetSentence}"`);
+    //         return spans.map(span => span.text); // Return original texts as fallback
+    //     }
 
-        const hyphenCounter = (fullText.slice(sentenceStartIndex, sentenceStartIndex + cleanTargetSentence.length).match(/-/g) || []).length;
-        console.log("hyphenCounter: ", hyphenCounter);
+    //     const hyphenCounter = (fullText.slice(sentenceStartIndex, sentenceStartIndex + cleanTargetSentence.length).match(/-/g) || []).length;
+    //     console.log("hyphenCounter: ", hyphenCounter);
         
-        const sentenceEndIndex = sentenceStartIndex + cleanTargetSentence.length + hyphenCounter*2;
+    //     const sentenceEndIndex = sentenceStartIndex + cleanTargetSentence.length + hyphenCounter*2;
         
-        // Extract only the parts of each span that contribute to the target sentence
-        const sentencePartTexts = [];
+    //     // Extract only the parts of each span that contribute to the target sentence
+    //     const sentencePartTexts = [];
         
-        spanPositions.forEach(spanPos => {
-            const spanStart = spanPos.textStartPos;
-            const spanEnd = spanPos.textEndPos;
+    //     spanPositions.forEach(spanPos => {
+    //         const spanStart = spanPos.textStartPos;
+    //         const spanEnd = spanPos.textEndPos;
             
-            // Check if this span overlaps with the target sentence
-            if (spanEnd > sentenceStartIndex && spanStart < sentenceEndIndex) {
-                // Calculate the intersection
-                const intersectionStart = Math.max(spanStart, sentenceStartIndex);
-                const intersectionEnd = Math.min(spanEnd, sentenceEndIndex);
+    //         // Check if this span overlaps with the target sentence
+    //         if (spanEnd > sentenceStartIndex && spanStart < sentenceEndIndex) {
+    //             // Calculate the intersection
+    //             const intersectionStart = Math.max(spanStart, sentenceStartIndex);
+    //             const intersectionEnd = Math.min(spanEnd, sentenceEndIndex);
                 
-                // Extract the relevant part from the original span text
-                const relativeStart = intersectionStart - spanStart;
-                const relativeEnd = intersectionEnd - spanStart;
+    //             // Extract the relevant part from the original span text
+    //             const relativeStart = intersectionStart - spanStart;
+    //             const relativeEnd = intersectionEnd - spanStart;
                 
-                const relevantPart = spanPos.originalText.substring(relativeStart, relativeEnd);
-                sentencePartTexts.push(relevantPart);
+    //             const relevantPart = spanPos.originalText.substring(relativeStart, relativeEnd);
+    //             sentencePartTexts.push(relevantPart);
                 
-                // Log page number, span number, start and end index
-                const span = spans[spanPos.spanIndex];
-                console.log(`📄 Page: ${span.page}, Span: ${span.index}, Start: ${relativeStart}, End: ${relativeEnd}, Text: "${relevantPart}"`);
-            }
-        });
+    //             // Log page number, span number, start and end index
+    //             const span = spans[spanPos.spanIndex];
+    //             console.log(`📄 Page: ${span.page}, Span: ${span.index}, Start: ${relativeStart}, End: ${relativeEnd}, Text: "${relevantPart}"`);
+    //         }
+    //     });
         
-        return sentencePartTexts;
-    };
+    //     return sentencePartTexts;
+    // };
 
     // Find ONLY the consecutive spans that form the provided sentence
-    const findConsecutiveSpansForSentence = (sentence) => {
-        console.log("inside findConsecutiveSpansForSentence");
-        if (!sentence.trim() || allTextSpans.length === 0) {
-            console.log('⚠️ No sentence provided or no spans available');
-            setExtractedSentenceParts([]);
-            setFoundSpans([]);
-            return;
-        }
-
-        // console.log('\n🎯 FINDING CONSECUTIVE SPANS FOR SENTENCE:');
-        // console.log(`Target sentence: "${sentence}"`);
-        // console.log('═'.repeat(80));
-
-        // Normalize the sentence (keep original case for better matching)
-        const normalizedSentence = sentence.trim();
-        console.log("normalizedSentence", normalizedSentence);
-        
-        // Try to find the sentence in concatenated spans
-        const consecutiveSpanGroups = [];
-        
-        
-        // Check every possible starting position in the spans array
-        for (let startIndex = 0; startIndex < allTextSpans.length; startIndex++) {
-            console.log("inside for loop");
-            const spanGroup = [];
-            let concatenatedText = '';
-            let currentIndex = startIndex;
-            
-            // Keep adding consecutive spans until we either:
-            // 1. Find the complete sentence
-            // 2. Go beyond what could contain the sentence
-            // 3. Reach the end of spans
-            while (currentIndex < allTextSpans.length) {
-                const currentSpan = allTextSpans[currentIndex];
-                spanGroup.push(currentSpan);
-                
-                // Add span text with appropriate spacing
-                if (concatenatedText.length > 0) {
-                    // Add space if the previous span doesn't end with space and current doesn't start with space
-                    // TODO: handle hyphens
-
-                    const hasHyphen = concatenatedText.endsWith('-');
-                    if (hasHyphen) {
-                        concatenatedText = concatenatedText.slice(0, -1) + currentSpan.text;
-                    } else {
-                        const needsSpace = !concatenatedText.endsWith(' ') && !currentSpan.text.startsWith(' ');
-                        concatenatedText += (needsSpace ? ' ' : '') + currentSpan.text;
-                    }
-                    
-                } else {
-                    concatenatedText = currentSpan.text;
-                }
-                
-                // Clean up the concatenated text for comparison using normalization that handles hyphens
-                const cleanConcatenated = normalizeTextForMatching(concatenatedText);
-                // console.log("cleanConcatenated: #", cleanConcatenated, "#");
-                // console.log('🔄 Clean concatenated text:', cleanConcatenated);
-                const cleanTarget = normalizeTextForMatching(normalizedSentence);
-                // console.log('🔄 Clean target text: #', cleanTarget, "#");
-                // Check if we found the exact sentence
-                if (cleanConcatenated === cleanTarget) {
-                    console.log(`✅ EXACT MATCH FOUND! Starting at span index ${startIndex}`);
-                    consecutiveSpanGroups.push({
-                        spans: [...spanGroup],
-                        matchType: 'EXACT',
-                        concatenatedText: cleanConcatenated,
-                        startIndex: startIndex,
-                        endIndex: currentIndex
-                    });
-                    break;
-                }
-                
-                // Check if the sentence is contained within the concatenated text
-                // But only if it's not just extra text at the beginning
-                if (cleanConcatenated.includes(cleanTarget)) {
-                    console.log("inside if");
-
-                    // Check if the target sentence starts at the beginning of concatenated text
-                    // or if there's only minimal extra text at the start
-                    const targetIndex = cleanConcatenated.indexOf(cleanTarget);
-                    console.log("targetIndex: ", targetIndex);
-                    const extraTextBefore = cleanConcatenated.substring(0, targetIndex).trim();
-                    
-                    // Only accept if there's no extra text before, or very minimal extra text
-                    //if (targetIndex === 0 || extraTextBefore.length <= 20) {
-                        console.log(`✅ SENTENCE CONTAINED! Starting at span index ${startIndex} (extra text: "${extraTextBefore}")`);
-                        consecutiveSpanGroups.push({
-                            spans: [...spanGroup],
-                            matchType: targetIndex === 0 ? 'CONTAINED_CLEAN' : 'CONTAINED_WITH_PREFIX',
-                            concatenatedText: cleanConcatenated,
-                            startIndex: startIndex,
-                            endIndex: currentIndex,
-                            extraTextLength: extraTextBefore.length
-                        });
-                    //}
-                    break;
-                }
-                
-                // Check if target sentence starts with our concatenated text (partial match - keep going)
-                if (cleanTarget.startsWith(cleanConcatenated)) {
-                    // Keep going, we might find the complete sentence
-                    currentIndex++;
-                    continue;
-                }
-                
-                // If concatenated text is already longer than target and no match, stop
-                // 20 is an arbitrary number that seem to work for now
-                if (cleanConcatenated.length > cleanTarget.length * 20) {
-                    console.log(" --------------- break because of length ---------------");
-                    break;
-                }
-                
-                currentIndex++;
-                
-                // Safety limit to prevent infinite loops
-                if (spanGroup.length > 20) {
-                    break;
-                }
-            }
-        }
-
-        // Filter to get the best matches with improved prioritization
-        const bestMatches = consecutiveSpanGroups
-            .sort((a, b) => {
-                // 1. Prefer EXACT matches over everything else
-                if (a.matchType === 'EXACT' && b.matchType !== 'EXACT') return -1;
-                if (b.matchType === 'EXACT' && a.matchType !== 'EXACT') return 1;
-                
-                // 2. Among non-exact matches, prefer CONTAINED_CLEAN over CONTAINED_WITH_PREFIX
-                if (a.matchType === 'CONTAINED_CLEAN' && b.matchType === 'CONTAINED_WITH_PREFIX') return -1;
-                if (b.matchType === 'CONTAINED_CLEAN' && a.matchType === 'CONTAINED_WITH_PREFIX') return 1;
-                
-                // 3. If both have prefixes, prefer the one with less extra text
-                if (a.extraTextLength !== undefined && b.extraTextLength !== undefined) {
-                    if (a.extraTextLength !== b.extraTextLength) return a.extraTextLength - b.extraTextLength;
-                }
-                
-                // 4. Finally, prefer shorter span groups
-                return a.spans.length - b.spans.length;
-            })
-            .slice(0, 1); // Take only the BEST match to avoid duplicates
-
-        // Log results
-        if (bestMatches.length === 0) {
-            console.log('❌ NO CONSECUTIVE SPANS FOUND FOR THIS SENTENCE');
-            console.log('💡 Try a shorter phrase or check if the sentence exists in the PDF');
-            setExtractedSentenceParts([]);
-            setFoundSpans([]);
-            return [];
-        }
-
-        console.log(`\n📊 FOUND ${bestMatches.length} CONSECUTIVE SPAN GROUP(S):`);
-        console.log('═'.repeat(80));
-
-        bestMatches.forEach((match, groupIndex) => {
-            console.log(`\n🎯 GROUP ${groupIndex + 1} (${match.matchType} MATCH):`);
-            console.log(`   Spans: ${match.startIndex} to ${match.endIndex} (${match.spans.length} spans)`);
-            console.log(`   Reconstructed: "${match.concatenatedText}"`);
-            console.log(`   Original:      "${normalizedSentence}"`);
-            
-            console.log(`\n   📋 INDIVIDUAL SPANS IN THIS GROUP:`);
-            match.spans.forEach((span, spanIndex) => {
-                console.log(`   ${spanIndex + 1}. [Page ${span.page}, Index ${span.index}] "${span.text}"`);
-                console.log(`      Position: (${Math.round(span.x)}, ${Math.round(span.y)}) | Font: ${span.fontName} ${Math.round(span.fontSize)}px`);
-            });
-        });
-
-        // Return the spans from the best match
-        const bestMatch = bestMatches[0];
-        console.log(`\n📤 RETURNING ${bestMatch.spans.length} CONSECUTIVE SPANS FOR PROGRAMMATIC USE:`);
-        console.log('These spans together form your sentence:');
-        bestMatch.spans.forEach((span, index) => {
-            console.log(`${index + 1}. "${span.text}"`);
-        });
-        
-         // Create array of span texts that contain only the sentence parts
-         const sentencePartTexts = extractSentencePartsFromSpans(bestMatch.spans, normalizedSentence);
-         console.log(`\n🎯 EXTRACTED SENTENCE PART TEXTS (only relevant portions):`);
-         sentencePartTexts.forEach((text, index) => {
-             console.log(`${index + 1}. "${text}"`);
-         });
-
-         // Update state with the extracted sentence parts and found spans
-         setExtractedSentenceParts(sentencePartTexts);
-         setFoundSpans(bestMatch.spans);
-
-        return bestMatch.spans;
-    };
-
-    // NEW: Find consecutive spans using the new algorithm with character-level precision
-    // const findConsecutiveSpansForSentenceNew = (sentence) => {
-    //     console.log("inside findConsecutiveSpansForSentenceNew");
+    // const findConsecutiveSpansForSentence = (sentence) => {
+    //     console.log("inside findConsecutiveSpansForSentence");
     //     if (!sentence.trim() || allTextSpans.length === 0) {
     //         console.log('⚠️ No sentence provided or no spans available');
     //         setExtractedSentenceParts([]);
@@ -489,49 +299,239 @@ const PDFFile = () => {
     //         return;
     //     }
 
+    //     // console.log('\n🎯 FINDING CONSECUTIVE SPANS FOR SENTENCE:');
+    //     // console.log(`Target sentence: "${sentence}"`);
+    //     // console.log('═'.repeat(80));
+
     //     // Normalize the sentence (keep original case for better matching)
     //     const normalizedSentence = sentence.trim();
     //     console.log("normalizedSentence", normalizedSentence);
         
-    //     // Extract text from spans to use as lines for the new function
-    //     const spanTexts = allTextSpans.map(span => span.text);
+    //     // Try to find the sentence in concatenated spans
+    //     const consecutiveSpanGroups = [];
         
-    //     // Use the new function to find matches
-    //     const matchResults = findQueryAcrossLinesWithSpaceAndHyphen(spanTexts, normalizedSentence);
         
-    //     if (matchResults.length === 0) {
-    //         console.log('❌ NO MATCHES FOUND USING findQueryAcrossLinesWithSpaceAndHyphen');
+    //     // Check every possible starting position in the spans array
+    //     for (let startIndex = 0; startIndex < allTextSpans.length; startIndex++) {
+    //         console.log("inside for loop");
+    //         const spanGroup = [];
+    //         let concatenatedText = '';
+    //         let currentIndex = startIndex;
+            
+    //         // Keep adding consecutive spans until we either:
+    //         // 1. Find the complete sentence
+    //         // 2. Go beyond what could contain the sentence
+    //         // 3. Reach the end of spans
+    //         while (currentIndex < allTextSpans.length) {
+    //             const currentSpan = allTextSpans[currentIndex];
+    //             spanGroup.push(currentSpan);
+                
+    //             // Add span text with appropriate spacing
+    //             if (concatenatedText.length > 0) {
+    //                 // Add space if the previous span doesn't end with space and current doesn't start with space
+    //                 // TODO: handle hyphens
+
+    //                 const hasHyphen = concatenatedText.endsWith('-');
+    //                 if (hasHyphen) {
+    //                     concatenatedText = concatenatedText.slice(0, -1) + currentSpan.text;
+    //                 } else {
+    //                     const needsSpace = !concatenatedText.endsWith(' ') && !currentSpan.text.startsWith(' ');
+    //                     concatenatedText += (needsSpace ? ' ' : '') + currentSpan.text;
+    //                 }
+                    
+    //             } else {
+    //                 concatenatedText = currentSpan.text;
+    //             }
+                
+    //             // Clean up the concatenated text for comparison using normalization that handles hyphens
+    //             const cleanConcatenated = normalizeTextForMatching(concatenatedText);
+    //             // console.log("cleanConcatenated: #", cleanConcatenated, "#");
+    //             // console.log('🔄 Clean concatenated text:', cleanConcatenated);
+    //             const cleanTarget = normalizeTextForMatching(normalizedSentence);
+    //             // console.log('🔄 Clean target text: #', cleanTarget, "#");
+    //             // Check if we found the exact sentence
+    //             if (cleanConcatenated === cleanTarget) {
+    //                 console.log(`✅ EXACT MATCH FOUND! Starting at span index ${startIndex}`);
+    //                 consecutiveSpanGroups.push({
+    //                     spans: [...spanGroup],
+    //                     matchType: 'EXACT',
+    //                     concatenatedText: cleanConcatenated,
+    //                     startIndex: startIndex,
+    //                     endIndex: currentIndex
+    //                 });
+    //                 break;
+    //             }
+                
+    //             // Check if the sentence is contained within the concatenated text
+    //             // But only if it's not just extra text at the beginning
+    //             if (cleanConcatenated.includes(cleanTarget)) {
+    //                 console.log("inside if");
+
+    //                 // Check if the target sentence starts at the beginning of concatenated text
+    //                 // or if there's only minimal extra text at the start
+    //                 const targetIndex = cleanConcatenated.indexOf(cleanTarget);
+    //                 console.log("targetIndex: ", targetIndex);
+    //                 const extraTextBefore = cleanConcatenated.substring(0, targetIndex).trim();
+                    
+    //                 // Only accept if there's no extra text before, or very minimal extra text
+    //                 //if (targetIndex === 0 || extraTextBefore.length <= 20) {
+    //                     console.log(`✅ SENTENCE CONTAINED! Starting at span index ${startIndex} (extra text: "${extraTextBefore}")`);
+    //                     consecutiveSpanGroups.push({
+    //                         spans: [...spanGroup],
+    //                         matchType: targetIndex === 0 ? 'CONTAINED_CLEAN' : 'CONTAINED_WITH_PREFIX',
+    //                         concatenatedText: cleanConcatenated,
+    //                         startIndex: startIndex,
+    //                         endIndex: currentIndex,
+    //                         extraTextLength: extraTextBefore.length
+    //                     });
+    //                 //}
+    //                 break;
+    //             }
+                
+    //             // Check if target sentence starts with our concatenated text (partial match - keep going)
+    //             if (cleanTarget.startsWith(cleanConcatenated)) {
+    //                 // Keep going, we might find the complete sentence
+    //                 currentIndex++;
+    //                 continue;
+    //             }
+                
+    //             // If concatenated text is already longer than target and no match, stop
+    //             // 20 is an arbitrary number that seem to work for now
+    //             if (cleanConcatenated.length > cleanTarget.length * 20) {
+    //                 console.log(" --------------- break because of length ---------------");
+    //                 break;
+    //             }
+                
+    //             currentIndex++;
+                
+    //             // Safety limit to prevent infinite loops
+    //             if (spanGroup.length > 20) {
+    //                 break;
+    //             }
+    //         }
+    //     }
+
+    //     // Filter to get the best matches with improved prioritization
+    //     const bestMatches = consecutiveSpanGroups
+    //         .sort((a, b) => {
+    //             // 1. Prefer EXACT matches over everything else
+    //             if (a.matchType === 'EXACT' && b.matchType !== 'EXACT') return -1;
+    //             if (b.matchType === 'EXACT' && a.matchType !== 'EXACT') return 1;
+                
+    //             // 2. Among non-exact matches, prefer CONTAINED_CLEAN over CONTAINED_WITH_PREFIX
+    //             if (a.matchType === 'CONTAINED_CLEAN' && b.matchType === 'CONTAINED_WITH_PREFIX') return -1;
+    //             if (b.matchType === 'CONTAINED_CLEAN' && a.matchType === 'CONTAINED_WITH_PREFIX') return 1;
+                
+    //             // 3. If both have prefixes, prefer the one with less extra text
+    //             if (a.extraTextLength !== undefined && b.extraTextLength !== undefined) {
+    //                 if (a.extraTextLength !== b.extraTextLength) return a.extraTextLength - b.extraTextLength;
+    //             }
+                
+    //             // 4. Finally, prefer shorter span groups
+    //             return a.spans.length - b.spans.length;
+    //         })
+    //         .slice(0, 1); // Take only the BEST match to avoid duplicates
+
+    //     // Log results
+    //     if (bestMatches.length === 0) {
+    //         console.log('❌ NO CONSECUTIVE SPANS FOUND FOR THIS SENTENCE');
+    //         console.log('💡 Try a shorter phrase or check if the sentence exists in the PDF');
     //         setExtractedSentenceParts([]);
     //         setFoundSpans([]);
-    //         return;
+    //         return [];
     //     }
-        
-    //     console.log('✅ MATCHES FOUND:', matchResults);
-        
-    //     // Extract the matched spans and highlight them
-    //     const matchedSpans = [];
-    //     const sentenceParts = [];
-        
-    //     matchResults.forEach(([spanIdx, startIdx, endIdx]) => {
-    //         const span = allTextSpans[spanIdx];
-    //         matchedSpans.push(span);
+
+    //     console.log(`\n📊 FOUND ${bestMatches.length} CONSECUTIVE SPAN GROUP(S):`);
+    //     console.log('═'.repeat(80));
+
+    //     bestMatches.forEach((match, groupIndex) => {
+    //         console.log(`\n🎯 GROUP ${groupIndex + 1} (${match.matchType} MATCH):`);
+    //         console.log(`   Spans: ${match.startIndex} to ${match.endIndex} (${match.spans.length} spans)`);
+    //         console.log(`   Reconstructed: "${match.concatenatedText}"`);
+    //         console.log(`   Original:      "${normalizedSentence}"`);
             
-    //         // Extract the relevant part of the text
-    //         const relevantText = span.text.substring(startIdx, endIdx);
-    //         sentenceParts.push(relevantText);
-            
-    //         // Highlight the span with the specific character range
-    //         highlightSpan(spanIdx, startIdx, endIdx);
-            
-    //         console.log(`📄 Page: ${span.page}, Span: ${span.index}, Start: ${startIdx}, End: ${endIdx}, Text: "${relevantText}"`);
+    //         console.log(`\n   📋 INDIVIDUAL SPANS IN THIS GROUP:`);
+    //         match.spans.forEach((span, spanIndex) => {
+    //             console.log(`   ${spanIndex + 1}. [Page ${span.page}, Index ${span.index}] "${span.text}"`);
+    //             console.log(`      Position: (${Math.round(span.x)}, ${Math.round(span.y)}) | Font: ${span.fontName} ${Math.round(span.fontSize)}px`);
+    //         });
+    //     });
+
+    //     // Return the spans from the best match
+    //     const bestMatch = bestMatches[0];
+    //     console.log(`\n📤 RETURNING ${bestMatch.spans.length} CONSECUTIVE SPANS FOR PROGRAMMATIC USE:`);
+    //     console.log('These spans together form your sentence:');
+    //     bestMatch.spans.forEach((span, index) => {
+    //         console.log(`${index + 1}. "${span.text}"`);
     //     });
         
-    //     // Update state with the extracted sentence parts and found spans
-    //     setExtractedSentenceParts(sentenceParts);
-    //     setFoundSpans(matchedSpans);
-        
-    //     return matchedSpans;
+    //      // Create array of span texts that contain only the sentence parts
+    //      const sentencePartTexts = extractSentencePartsFromSpans(bestMatch.spans, normalizedSentence);
+    //      console.log(`\n🎯 EXTRACTED SENTENCE PART TEXTS (only relevant portions):`);
+    //      sentencePartTexts.forEach((text, index) => {
+    //          console.log(`${index + 1}. "${text}"`);
+    //      });
+
+    //      // Update state with the extracted sentence parts and found spans
+    //      setExtractedSentenceParts(sentencePartTexts);
+    //      setFoundSpans(bestMatch.spans);
+
+    //     return bestMatch.spans;
     // };
+
+    // NEW: Find consecutive spans using the new algorithm with character-level precision
+    const findConsecutiveSpansForSentenceNew = (sentence) => {
+        console.log("inside findConsecutiveSpansForSentenceNew");
+        if (!sentence.trim() || allTextSpans.length === 0) {
+            console.log('⚠️ No sentence provided or no spans available');
+            setExtractedSentenceParts([]);
+            setFoundSpans([]);
+            return;
+        }
+
+        // Normalize the sentence (keep original case for better matching)
+        const normalizedSentence = sentence.trim();
+        console.log("normalizedSentence", normalizedSentence);
+        
+        // Extract text from spans to use as lines for the new function
+        const spanTexts = allTextSpans.map(span => span.text);
+        
+        // Use the new function to find matches
+        const matchResults = findQueryAcrossLinesWithSpaceAndHyphen(spanTexts, normalizedSentence);
+        
+        if (matchResults.length === 0) {
+            console.log('❌ NO MATCHES FOUND USING findQueryAcrossLinesWithSpaceAndHyphen');
+            setExtractedSentenceParts([]);
+            setFoundSpans([]);
+            return;
+        }
+        
+        console.log('✅ MATCHES FOUND:', matchResults);
+        
+        // Extract the matched spans and highlight them
+        const matchedSpans = [];
+        const sentenceParts = [];
+        
+        matchResults.forEach(([spanIdx, startIdx, endIdx]) => {
+            const span = allTextSpans[spanIdx];
+            matchedSpans.push(span);
+            
+            // Extract the relevant part of the text
+            const relevantText = span.text.substring(startIdx, endIdx);
+            sentenceParts.push(relevantText);
+            
+            // Highlight the span with the specific character range
+            highlightSpan(spanIdx, startIdx, endIdx);
+            
+            console.log(`📄 Page: ${span.page}, Span: ${span.index}, Start: ${startIdx}, End: ${endIdx}, Text: "${relevantText}"`);
+        });
+        
+        // Update state with the extracted sentence parts and found spans
+        setExtractedSentenceParts(sentenceParts);
+        setFoundSpans(matchedSpans);
+        
+        return matchedSpans;
+    };
 
     // Auto-extract spans when component mounts
     useEffect(() => {
@@ -600,7 +600,7 @@ const PDFFile = () => {
                         }}
                     />
                     <button
-                        onClick={() => findConsecutiveSpansForSentence(targetSentence)}
+                        onClick={() => findConsecutiveSpansForSentenceNew(targetSentence)}
                         disabled={!targetSentence.trim() || allTextSpans.length === 0}
                         style={{
                             padding: '12px 20px',
@@ -685,7 +685,7 @@ const PDFFile = () => {
                                 key={index}
                                 onClick={() => {
                                     setTargetSentence(sentence);
-                                    findConsecutiveSpansForSentence(sentence);
+                                    findConsecutiveSpansForSentenceNew(sentence);
                                 }}
                                 style={{
                                     padding: '8px 12px',
