@@ -21,6 +21,72 @@ const PDFFile = () => {
         pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
     }, []);
 
+    // Function to highlight a specific span with character range
+    const highlightSpan = (spanIdx, startCharIdx = 0, endCharIdx = null) => {
+        // Find all text layers across all pages
+        const textLayers = document.querySelectorAll('[data-testid^="core__text-layer-"]');
+        if (textLayers.length === 0) {
+            console.log('No text layers found');
+            return;
+        }
+        
+        let targetSpan = null;
+        let currentSpanIndex = 0;
+        let foundPageIdx = -1;
+        
+        // Iterate through all pages to find the span with the given index
+        for (let pageIdx = 0; pageIdx < textLayers.length; pageIdx++) {
+            const textLayer = textLayers[pageIdx];
+            const spans = textLayer.querySelectorAll('span');
+            
+            if (currentSpanIndex + spans.length > spanIdx) {
+                // Found the page containing our target span
+                const localSpanIdx = spanIdx - currentSpanIndex;
+                targetSpan = spans[localSpanIdx];
+                foundPageIdx = pageIdx;
+                break;
+            }
+            currentSpanIndex += spans.length;
+        }
+        
+        if (!targetSpan) {
+            console.log(`❌ Span index ${spanIdx} not found across all pages`);
+            return;
+        }
+        
+        const spanText = targetSpan.textContent;
+        
+        // If no endCharIdx specified, highlight the entire span
+        if (endCharIdx === null) {
+            endCharIdx = spanText.length;
+        }
+        
+        // Validate character indices
+        if (startCharIdx < 0 || endCharIdx > spanText.length || startCharIdx >= endCharIdx) {
+            console.log(`❌ Invalid character indices: ${startCharIdx}-${endCharIdx} for text length ${spanText.length}`);
+            return;
+        }
+        
+        // Create a wrapper span to highlight only the specified portion
+        const wrapper = document.createElement('span');
+        wrapper.style.background = 'yellow';
+        wrapper.style.borderRadius = '4px';
+        
+        const beforeText = spanText.substring(0, startCharIdx);
+        const highlightedText = spanText.substring(startCharIdx, endCharIdx);
+        const afterText = spanText.substring(endCharIdx);
+        
+        wrapper.innerHTML = `${beforeText}<span style="background: yellow; border-radius: 4px;">${highlightedText}</span>${afterText}`;
+        
+        // Replace the original span content
+        targetSpan.innerHTML = wrapper.innerHTML;
+        
+        console.log(`✅ Highlighted span ${spanIdx} on page ${foundPageIdx}, characters ${startCharIdx}-${endCharIdx}`);
+        console.log(`📝 Text content: "${spanText}"`);
+        console.log(`🎯 Highlighted portion: "${highlightedText}"`);
+        console.log(`🎨 Applied styles: background=yellow, borderRadius=4px`);
+    };
+
     // Extract all text spans directly from PDF
     const extractAllTextSpans = async () => {
         setIsExtracting(true);
@@ -63,6 +129,7 @@ const PDFFile = () => {
             
             setAllTextSpans(allSpans);
             console.log(`✅ Extracted and sorted ${allSpans.length} text spans from PDF`);
+            console.log("allSpans: ", allSpans);
             
         } catch (error) {
             console.error('❌ Error extracting text spans:', error);
@@ -83,6 +150,57 @@ const PDFFile = () => {
             .trim();
         // console.log('✅ Normalized text:', normalized);
         return normalized;
+    };
+
+    // Function to find query across lines with space and hyphen handling
+    const findQueryAcrossLinesWithSpaceAndHyphen = (lines, query) => {
+        const queryLen = query.length;
+        for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+            console.log('----------------------------------');
+            const line = lines[lineIdx];
+            for (let charIdx = 0; charIdx < line.length; charIdx++) {
+                let qIdx = 0; // pointer into query
+                let lIdx = lineIdx;
+                let cIdx = charIdx;
+                const matchSpans = [];
+                while (qIdx < queryLen && lIdx < lines.length) {
+                    const currentLine = lines[lIdx];
+                    const startCol = cIdx;
+                    while (cIdx < currentLine.length && qIdx < queryLen) {
+                        console.log(currentLine.slice(0, cIdx + 1));
+                        if (currentLine[cIdx] === query[qIdx]) {
+                            cIdx++;
+                            qIdx++;
+                        } else if (currentLine[cIdx] === '-') {
+                            cIdx++; // skip the hyphen
+                        } else {
+                            break;
+                        }
+                    }
+                    if (startCol !== cIdx) {
+                        matchSpans.push([lIdx, startCol, cIdx]);
+                    }
+                    if (qIdx === queryLen) {
+                        return matchSpans;
+                    }
+                    const atEndOfLine = cIdx === currentLine.length;
+                    // Handle hyphenated line-break
+                    if (atEndOfLine && currentLine.endsWith('-') && lIdx + 1 < lines.length) {
+                        lIdx += 1;
+                        cIdx = 0;
+                    }
+                    // Handle line-break treated as a space in query
+                    else if (atEndOfLine && qIdx < queryLen && query[qIdx] === ' ') {
+                        qIdx += 1;
+                        lIdx += 1;
+                        cIdx = 0;
+                    } else {
+                        break; // mismatch or unexpected break
+                    }
+                }
+            }
+        }
+        return []; // no match found
     };
 
     // Helper function to extract only the sentence parts from spans
@@ -170,8 +288,6 @@ const PDFFile = () => {
         
         return sentencePartTexts;
     };
-
-    
 
     // Find ONLY the consecutive spans that form the provided sentence
     const findConsecutiveSpansForSentence = (sentence) => {
@@ -363,80 +479,68 @@ const PDFFile = () => {
         return bestMatch.spans;
     };
 
+    // NEW: Find consecutive spans using the new algorithm with character-level precision
+    // const findConsecutiveSpansForSentenceNew = (sentence) => {
+    //     console.log("inside findConsecutiveSpansForSentenceNew");
+    //     if (!sentence.trim() || allTextSpans.length === 0) {
+    //         console.log('⚠️ No sentence provided or no spans available');
+    //         setExtractedSentenceParts([]);
+    //         setFoundSpans([]);
+    //         return;
+    //     }
+
+    //     // Normalize the sentence (keep original case for better matching)
+    //     const normalizedSentence = sentence.trim();
+    //     console.log("normalizedSentence", normalizedSentence);
+        
+    //     // Extract text from spans to use as lines for the new function
+    //     const spanTexts = allTextSpans.map(span => span.text);
+        
+    //     // Use the new function to find matches
+    //     const matchResults = findQueryAcrossLinesWithSpaceAndHyphen(spanTexts, normalizedSentence);
+        
+    //     if (matchResults.length === 0) {
+    //         console.log('❌ NO MATCHES FOUND USING findQueryAcrossLinesWithSpaceAndHyphen');
+    //         setExtractedSentenceParts([]);
+    //         setFoundSpans([]);
+    //         return;
+    //     }
+        
+    //     console.log('✅ MATCHES FOUND:', matchResults);
+        
+    //     // Extract the matched spans and highlight them
+    //     const matchedSpans = [];
+    //     const sentenceParts = [];
+        
+    //     matchResults.forEach(([spanIdx, startIdx, endIdx]) => {
+    //         const span = allTextSpans[spanIdx];
+    //         matchedSpans.push(span);
+            
+    //         // Extract the relevant part of the text
+    //         const relevantText = span.text.substring(startIdx, endIdx);
+    //         sentenceParts.push(relevantText);
+            
+    //         // Highlight the span with the specific character range
+    //         highlightSpan(spanIdx, startIdx, endIdx);
+            
+    //         console.log(`📄 Page: ${span.page}, Span: ${span.index}, Start: ${startIdx}, End: ${endIdx}, Text: "${relevantText}"`);
+    //     });
+        
+    //     // Update state with the extracted sentence parts and found spans
+    //     setExtractedSentenceParts(sentenceParts);
+    //     setFoundSpans(matchedSpans);
+        
+    //     return matchedSpans;
+    // };
+
     // Auto-extract spans when component mounts
     useEffect(() => {
         extractAllTextSpans();
     }, []);
 
     useEffect(() => {
-        const highlightSpan = (spanIdx, startCharIdx = 0, endCharIdx = null) => {
-            // Find all text layers across all pages
-            const textLayers = document.querySelectorAll('[data-testid^="core__text-layer-"]');
-            if (textLayers.length === 0) {
-                console.log('No text layers found');
-                return;
-            }
-            
-            let targetSpan = null;
-            let currentSpanIndex = 0;
-            let foundPageIdx = -1;
-            
-            // Iterate through all pages to find the span with the given index
-            for (let pageIdx = 0; pageIdx < textLayers.length; pageIdx++) {
-                const textLayer = textLayers[pageIdx];
-                const spans = textLayer.querySelectorAll('span');
-                
-                if (currentSpanIndex + spans.length > spanIdx) {
-                    // Found the page containing our target span
-                    const localSpanIdx = spanIdx - currentSpanIndex;
-                    targetSpan = spans[localSpanIdx];
-                    foundPageIdx = pageIdx;
-                    break;
-                }
-                currentSpanIndex += spans.length;
-            }
-            
-            if (!targetSpan) {
-                console.log(`❌ Span index ${spanIdx} not found across all pages`);
-                return;
-            }
-            
-            const spanText = targetSpan.textContent;
-            
-            // If no endCharIdx specified, highlight the entire span
-            if (endCharIdx === null) {
-                endCharIdx = spanText.length;
-            }
-            
-            // Validate character indices
-            if (startCharIdx < 0 || endCharIdx > spanText.length || startCharIdx >= endCharIdx) {
-                console.log(`❌ Invalid character indices: ${startCharIdx}-${endCharIdx} for text length ${spanText.length}`);
-                return;
-            }
-            
-            // Create a wrapper span to highlight only the specified portion
-            const wrapper = document.createElement('span');
-            wrapper.style.background = 'yellow';
-            wrapper.style.borderRadius = '4px';
-            
-            const beforeText = spanText.substring(0, startCharIdx);
-            const highlightedText = spanText.substring(startCharIdx, endCharIdx);
-            const afterText = spanText.substring(endCharIdx);
-            
-            wrapper.innerHTML = `${beforeText}<span style="background: yellow; border-radius: 4px;">${highlightedText}</span>${afterText}`;
-            
-            // Replace the original span content
-            targetSpan.innerHTML = wrapper.innerHTML;
-            
-            console.log(`✅ Highlighted span ${spanIdx} on page ${foundPageIdx}, characters ${startCharIdx}-${endCharIdx}`);
-            console.log(`📝 Text content: "${spanText}"`);
-            console.log(`🎯 Highlighted portion: "${highlightedText}"`);
-            console.log(`🎨 Applied styles: background=yellow, borderRadius=4px`);
-        };
-        
-        // Try highlighting with a delay to ensure DOM is ready
         const timeout = setTimeout(() => {
-            highlightSpan(95); // Span 89 across all pages, characters 0-5
+            highlightSpan(); // Span 89 across all pages, characters 0-5
             // highlightSpan(21); // Span 21 across all pages
         }, 1000);
         
