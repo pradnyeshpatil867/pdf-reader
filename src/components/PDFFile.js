@@ -21,40 +21,127 @@ const PDFFile = () => {
         pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
     }, []);
 
-    // Function to highlight a specific span with character range
-    const highlightSpan = (spanIdx, startCharIdx = 0, endCharIdx = null) => {
+    // Function to find the DOM span index that corresponds to a span from allTextSpans
+    const findDomSpanIndex = (allTextSpanIndex) => {
+        console.log("inside findDomSpanIndex");
+        if (allTextSpanIndex < 0 || allTextSpanIndex >= allTextSpans.length) {
+            console.log(`❌ Invalid allTextSpan index: ${allTextSpanIndex}`);
+            return -1;
+        }
+
+        const targetSpan = allTextSpans[allTextSpanIndex];
+        console.log(`🔍 Looking for span: "${targetSpan.text}" (Page: ${targetSpan.page}, Index: ${targetSpan.index})`);
+
         // Find all text layers across all pages
         const textLayers = document.querySelectorAll('[data-testid^="core__text-layer-"]');
         if (textLayers.length === 0) {
-            console.log('No text layers found');
-            return;
+            console.log('❌ No text layers found in DOM');
+            return -1;
         }
+
+        let domSpanIndex = 0;
         
-        let targetSpan = null;
-        let currentSpanIndex = 0;
-        let foundPageIdx = -1;
-        
-        // Iterate through all pages to find the span with the given index
+        // Iterate through all pages to find the matching span
         for (let pageIdx = 0; pageIdx < textLayers.length; pageIdx++) {
             const textLayer = textLayers[pageIdx];
             const spans = textLayer.querySelectorAll('span');
-            
-            if (currentSpanIndex + spans.length > spanIdx) {
-                // Found the page containing our target span
-                const localSpanIdx = spanIdx - currentSpanIndex;
-                targetSpan = spans[localSpanIdx];
-                foundPageIdx = pageIdx;
-                break;
+            console.log("spans", spans);
+
+            // Check each span in this page
+            for (let localSpanIdx = 0; localSpanIdx < spans.length; localSpanIdx++) {
+                const domSpan = spans[localSpanIdx];
+                console.log("domSpan", domSpan);
+                const domText = domSpan.textContent;
+                console.log("domText", domText);
+                
+                // Simple exact text match
+                if (domText === targetSpan.text) {
+                    console.log(`✅ Found exact text match at DOM span index ${domSpanIndex}`);
+                    console.log(`   Text: "${domText}"`);
+                    return domSpanIndex;
+                }
+                
+                domSpanIndex++;
             }
-            currentSpanIndex += spans.length;
         }
         
-        if (!targetSpan) {
-            console.log(`❌ Span index ${spanIdx} not found across all pages`);
+        // If no exact match found, try sequential order fallback
+        console.log(`❌ No exact text match found for allTextSpan index ${allTextSpanIndex}`);
+        console.log(`🔄 Trying fallback: sequential order matching...`);
+        
+        // Count total DOM spans up to the target page
+        let totalDomSpansBeforePage = 0;
+        for (let pageIdx = 0; pageIdx < targetSpan.page - 1; pageIdx++) {
+            if (pageIdx < textLayers.length) {
+                const textLayer = textLayers[pageIdx];
+                const spans = textLayer.querySelectorAll('span');
+                totalDomSpansBeforePage += spans.length;
+            }
+        }
+        
+        // // Estimate the DOM span index based on the PDF.js span index within the page
+        // const estimatedDomIndex = totalDomSpansBeforePage + targetSpan.index;
+        // console.log(`📊 Estimated DOM index: ${estimatedDomIndex} (based on page ${targetSpan.page}, span index ${targetSpan.index})`);
+        
+        // // Verify the estimated index is within bounds
+        // let totalDomSpans = 0;
+        // for (let pageIdx = 0; pageIdx < textLayers.length; pageIdx++) {
+        //     const textLayer = textLayers[pageIdx];
+        //     const spans = textLayer.querySelectorAll('span');
+        //     totalDomSpans += spans.length;
+        // }
+        
+        // if (estimatedDomIndex >= 0 && estimatedDomIndex < totalDomSpans) {
+        //     console.log(`⚠️ Using estimated DOM index ${estimatedDomIndex} as fallback`);
+        //     return estimatedDomIndex;
+        // } else {
+        //     console.log(`❌ Estimated DOM index ${estimatedDomIndex} is out of bounds (0-${totalDomSpans - 1})`);
+        //     return -1;
+        // }
+    };
+
+    // Function to highlight a specific span with character range using existing allTextSpans
+    const highlightSpan = (spanIdx, startCharIdx = 0, endCharIdx = null) => {
+        console.log("inside highlightSpan");
+        
+        // Validate span index against existing allTextSpans
+        if (spanIdx < 0 || spanIdx >= allTextSpans.length) {
+            console.log(`❌ Invalid span index: ${spanIdx}`);
             return;
         }
         
-        const spanText = targetSpan.textContent;
+        // Get the target span data from existing allTextSpans
+        const targetSpan = allTextSpans[spanIdx];
+        console.log(`🔍 Found target span: "${targetSpan.text}" (Page: ${targetSpan.page}, Index: ${targetSpan.index})`);
+        
+        // Find the corresponding DOM element
+        const textLayer = document.querySelector(`[data-testid="core__text-layer-${targetSpan.page - 1}"]`);
+        if (!textLayer) {
+            console.log(`❌ Text layer for page ${targetSpan.page} not found`);
+            return;
+        }
+        
+        const spans = textLayer.querySelectorAll('span');
+        console.log(`📄 Found ${spans.length} spans on page ${targetSpan.page}`);
+        console.log("spans of textLayer", spans);
+        
+        // Find the span with matching text content
+        let targetDomSpan = null;
+        for (let i = 0; i < spans.length; i++) {
+            const span = spans[i];
+            if (span.textContent === targetSpan.text) {
+                targetDomSpan = span;
+                console.log(`✅ Found matching DOM span at index ${i} on page ${targetSpan.page}`);
+                break;
+            }
+        }
+        
+        if (!targetDomSpan) {
+            console.log(`❌ DOM span with text "${targetSpan.text}" not found on page ${targetSpan.page}`);
+            return;
+        }
+        
+        const spanText = targetDomSpan.textContent;
         
         // If no endCharIdx specified, highlight the entire span
         if (endCharIdx === null) {
@@ -79,9 +166,9 @@ const PDFFile = () => {
         wrapper.innerHTML = `${beforeText}<span style="background: yellow; border-radius: 4px;">${highlightedText}</span>${afterText}`;
         
         // Replace the original span content
-        targetSpan.innerHTML = wrapper.innerHTML;
+        targetDomSpan.innerHTML = wrapper.innerHTML;
         
-        console.log(`✅ Highlighted span ${spanIdx} on page ${foundPageIdx}, characters ${startCharIdx}-${endCharIdx}`);
+        console.log(`✅ Highlighted span ${spanIdx} on page ${targetSpan.page}, characters ${startCharIdx}-${endCharIdx}`);
         console.log(`📝 Text content: "${spanText}"`);
         console.log(`🎯 Highlighted portion: "${highlightedText}"`);
         console.log(`🎨 Applied styles: background=yellow, borderRadius=4px`);
@@ -97,7 +184,6 @@ const PDFFile = () => {
             const pdf = await loadingTask.promise;
             
             const allSpans = [];
-            
             for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
                 console.log(`📄 Extracting page ${pageNum}...`);
                 const page = await pdf.getPage(pageNum);
@@ -119,7 +205,9 @@ const PDFFile = () => {
                     }
                 });
             }
-            
+
+            console.log("allSpans after for loop", allSpans);
+
             // Sort spans by page, then by position (top to bottom, left to right)
             allSpans.sort((a, b) => {
                 if (a.page !== b.page) return a.page - b.page;
@@ -156,7 +244,7 @@ const PDFFile = () => {
     const findQueryAcrossLinesWithSpaceAndHyphen = (lines, query) => {
         const queryLen = query.length;
         for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
-            console.log('----------------------------------');
+            // console.log('----------------------------------');
             const line = lines[lineIdx];
             for (let charIdx = 0; charIdx < line.length; charIdx++) {
                 let qIdx = 0; // pointer into query
@@ -167,7 +255,7 @@ const PDFFile = () => {
                     const currentLine = lines[lIdx];
                     const startCol = cIdx;
                     while (cIdx < currentLine.length && qIdx < queryLen) {
-                        console.log(currentLine.slice(0, cIdx + 1));
+                        // console.log(currentLine.slice(0, cIdx + 1));
                         if (currentLine[cIdx] === query[qIdx]) {
                             cIdx++;
                             qIdx++;
@@ -467,7 +555,7 @@ const PDFFile = () => {
         
     //      // Create array of span texts that contain only the sentence parts
     //      const sentencePartTexts = extractSentencePartsFromSpans(bestMatch.spans, normalizedSentence);
-    //      console.log(`\n🎯 EXTRACTED SENTENCE PART TEXTS (only relevant portions):`);
+    //      console.log(`\n🎯 EXTRACTED SENTENCE PARTS (only relevant portions):`);
     //      sentencePartTexts.forEach((text, index) => {
     //          console.log(`${index + 1}. "${text}"`);
     //      });
@@ -495,6 +583,8 @@ const PDFFile = () => {
         
         // Extract text from spans to use as lines for the new function
         const spanTexts = allTextSpans.map(span => span.text);
+        console.log("allTextSpans", allTextSpans);
+        console.log("spanTexts", spanTexts);
         
         // Use the new function to find matches
         const matchResults = findQueryAcrossLinesWithSpaceAndHyphen(spanTexts, normalizedSentence);
@@ -519,15 +609,20 @@ const PDFFile = () => {
             // Extract the relevant part of the text
             const relevantText = span.text.substring(startIdx, endIdx);
             sentenceParts.push(relevantText);
+
+            console.log("spanIdx:", spanIdx);
+            console.log("startIdx:", startIdx);
+            console.log("endIdx:", endIdx);
             
-            // Highlight the span with the specific character range
+            // Highlight the span directly using the existing allTextSpans data
             highlightSpan(spanIdx, startIdx, endIdx);
+            console.log(`✅ Highlighted span ${spanIdx} with character range ${startIdx}-${endIdx}`);
             
             console.log(`📄 Page: ${span.page}, Span: ${span.index}, Start: ${startIdx}, End: ${endIdx}, Text: "${relevantText}"`);
         });
         
         // Update state with the extracted sentence parts and found spans
-        setExtractedSentenceParts(sentenceParts);
+        // setExtractedSentenceParts(sentenceParts);
         setFoundSpans(matchedSpans);
         
         return matchedSpans;
@@ -540,7 +635,8 @@ const PDFFile = () => {
 
     useEffect(() => {
         const timeout = setTimeout(() => {
-            highlightSpan(); // Span 89 across all pages, characters 0-5
+            // highlightSpan(83, 97, 100); // Span 89 across all pages, characters 0-5
+            // highlightSpan(84, 0, 32); // Span 89 across all pages, characters 0-5
             // highlightSpan(21); // Span 21 across all pages
         }, 1000);
         
@@ -625,7 +721,8 @@ const PDFFile = () => {
                             border: 'none',
                             borderRadius: '6px',
                             fontWeight: 'bold',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            marginRight: '10px'
                         }}
                     >
                         {isExtracting ? '⏳ Extracting...' : '🔄 Re-extract Spans'}
