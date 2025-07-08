@@ -240,8 +240,48 @@ const PDFFile = () => {
         return normalized;
     };
 
+    // Function to clear all existing highlights
+    const clearHighlights = () => {
+        console.log("inside clearHighlights");
+        
+        // Find all text layers across all pages
+        const textLayers = document.querySelectorAll('[data-testid^="core__text-layer-"]');
+        if (textLayers.length === 0) {
+            console.log('❌ No text layers found in DOM');
+            return;
+        }
+
+        let clearedCount = 0;
+        
+        // Iterate through all pages to clear highlights
+        textLayers.forEach((textLayer, pageIdx) => {
+            const spans = textLayer.querySelectorAll('span');
+            
+            spans.forEach((span) => {
+                // Remove any existing highlight styles
+                span.style.backgroundColor = '';
+                span.style.color = '';
+                span.style.fontWeight = '';
+                span.style.textDecoration = '';
+                
+                // Remove any highlight-related classes
+                span.classList.remove('highlighted', 'pdf-highlight');
+                
+                clearedCount++;
+            });
+        });
+        
+        console.log(`✅ Cleared highlights from ${clearedCount} spans across ${textLayers.length} pages`);
+        
+        // Clear the state variables
+        setExtractedSentenceParts([]);
+        setFoundSpans([]);
+    };
+
     // Function to find query across lines with space and hyphen handling
     const findQueryAcrossLinesWithSpaceAndHyphen = (lines, query) => {
+
+        clearHighlights();
         const queryLen = query.length;
         for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
             // console.log('----------------------------------');
