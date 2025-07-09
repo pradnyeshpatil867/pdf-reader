@@ -7,7 +7,7 @@ import * as pdfjs from 'pdfjs-dist';
 import '@react-pdf-viewer/core/lib/styles/index.css';
 import '@react-pdf-viewer/search/lib/styles/index.css';
 
-import samplePDF from '../static/053-007l_S1_Nackenschmerz_2017-01-abgelaufen.pdf';
+import samplePDF from '../static/079-001l_S3_Sepsis-Praevention-Diagnose-Therapie-Nachsorge_2020-03_01-abgelaufen-1-10.pdf';
 
 const PDFFile = () => {
     const [allTextSpans, setAllTextSpans] = useState([]);
@@ -22,78 +22,105 @@ const PDFFile = () => {
     }, []);
 
 
-    // Function to highlight a specific span with character range using existing allTextSpans
-    const highlightSpan = (spanIdx, startCharIdx = 0, endCharIdx = null) => {
-        console.log("inside highlightSpan");
+    // Function to highlight multiple spans with character ranges using existing allTextSpans
+    const highlightSpan = (matchResults) => {
+        console.log("inside highlightSpan with matchResults:", matchResults);
         
-        // Validate span index against existing allTextSpans
-        if (spanIdx < 0 || spanIdx >= allTextSpans.length) {
-            console.log(`❌ Invalid span index: ${spanIdx}`);
+        if (!Array.isArray(matchResults) || matchResults.length === 0) {
+            console.log("❌ No match results provided or empty array");
             return;
         }
         
-        // Get the target span data from existing allTextSpans
-        const targetSpan = allTextSpans[spanIdx];
-        console.log(`🔍 Found target span: "${targetSpan.text}" (Page: ${targetSpan.page}, Index: ${targetSpan.index})`);
-        
-        // Find the corresponding DOM element
-        const textLayer = document.querySelector(`[data-testid="core__text-layer-${targetSpan.page - 1}"]`);
-        if (!textLayer) {
-            console.log(`❌ Text layer for page ${targetSpan.page} not found`);
-            return;
+        // Ensure the tracking object exists
+        if (!window.__lastSpanIndexPerPage) {
+            window.__lastSpanIndexPerPage = {};
         }
-        
-        const spans = textLayer.querySelectorAll('span');
-        console.log(`📄 Found ${spans.length} spans on page ${targetSpan.page}`);
-        console.log("spans of textLayer", spans);
-        
-        // Find the span with matching text content
-        let targetDomSpan = null;
-        for (let i = 0; i < spans.length; i++) {
-            const span = spans[i];
-            if (span.textContent === targetSpan.text) {
-                targetDomSpan = span;
-                console.log(`✅ Found matching DOM span at index ${i} on page ${targetSpan.page}`);
-                break;
+
+        matchResults.forEach(([spanIdx, startCharIdx, endCharIdx]) => {
+            console.log(`Processing match: spanIdx=${spanIdx}, startCharIdx=${startCharIdx}, endCharIdx=${endCharIdx}`);
+            
+            // Validate span index against existing allTextSpans
+            if (spanIdx < 0 || spanIdx >= allTextSpans.length) {
+                console.log(`❌ Invalid span index: ${spanIdx}`);
+                return;
             }
+            
+            // Get the target span data from existing allTextSpans
+            const targetSpan = allTextSpans[spanIdx];
+            console.log(`🔍 Found target span: "${targetSpan.text}" (Page: ${targetSpan.page}, Index: ${targetSpan.index})`);
+            
+            // Find the corresponding DOM element
+            // We will keep track of the previous span index for each page.
+            // For the first match on a page, we start from 0. For subsequent matches, we start searching from the next index after the previous match.
+            const pageKey = `page_${targetSpan.page}`;
+            let prevSpanIdx = window.__lastSpanIndexPerPage[pageKey] ?? -1;
+
+            const textLayer = document.querySelector(`[data-testid="core__text-layer-${targetSpan.page - 1}"]`);
+            if (!textLayer) {
+                console.log(`❌ Text layer for page ${targetSpan.page} not found`);
+                return;
+            }
+
+            const spans = textLayer.querySelectorAll('span');
+            console.log(`📄 Found ${spans.length} spans on page ${targetSpan.page}`);
+
+            // Find the span with matching text content, but only after the previous span index
+            let targetDomSpan = null;
+            for (let i = prevSpanIdx + 1; i < spans.length; i++) {
+                const span = spans[i];
+                if (span.textContent === targetSpan.text) {
+                    targetDomSpan = span;
+                    window.__lastSpanIndexPerPage[pageKey] = i; // Store the last found index for this page
+                    console.log(`✅ Found matching DOM span at index ${i} on page ${targetSpan.page}`);
+                    break;
+                }
+            }
+            
+            if (!targetDomSpan) {
+                console.log(`❌ DOM span with text "${targetSpan.text}" not found on page ${targetSpan.page}`);
+                return;
+            }
+            
+            const spanText = targetDomSpan.textContent;
+            
+            // If no endCharIdx specified, highlight the entire span
+            if (endCharIdx === null) {
+                endCharIdx = spanText.length;
+            }
+            
+            // Validate character indices
+            if (startCharIdx < 0 || endCharIdx > spanText.length || startCharIdx >= endCharIdx) {
+                console.log(`❌ Invalid character indices: ${startCharIdx}-${endCharIdx} for text length ${spanText.length}`);
+                return;
+            }
+            
+            // Create a wrapper span to highlight only the specified portion
+            const wrapper = document.createElement('span');
+            wrapper.style.background = 'yellow';
+            wrapper.style.borderRadius = '4px';
+            
+            const beforeText = spanText.substring(0, startCharIdx);
+            const highlightedText = spanText.substring(startCharIdx, endCharIdx);
+            const afterText = spanText.substring(endCharIdx);
+            
+            wrapper.innerHTML = `${beforeText}<span style="background: yellow; border-radius: 4px;">${highlightedText}</span>${afterText}`;
+            
+            // Replace the original span content
+            targetDomSpan.innerHTML = wrapper.innerHTML;
+            
+            console.log(`✅ Highlighted span ${spanIdx} on page ${targetSpan.page}, characters ${startCharIdx}-${endCharIdx}`);
+            console.log(`📝 Text content: "${spanText}"`);
+            console.log(`🎯 Highlighted portion: "${highlightedText}"`);
+            console.log(`🎨 Applied styles: background= #FFFF00, borderRadius=4px`);
+        });
+
+        // Clear the tracking object after all highlights are done
+        if (window.__lastSpanIndexPerPage) {
+            window.__lastSpanIndexPerPage = {};
+            console.log("🧹 Cleared window.__lastSpanIndexPerPage after highlighting all spans.");
         }
         
-        if (!targetDomSpan) {
-            console.log(`❌ DOM span with text "${targetSpan.text}" not found on page ${targetSpan.page}`);
-            return;
-        }
-        
-        const spanText = targetDomSpan.textContent;
-        
-        // If no endCharIdx specified, highlight the entire span
-        if (endCharIdx === null) {
-            endCharIdx = spanText.length;
-        }
-        
-        // Validate character indices
-        if (startCharIdx < 0 || endCharIdx > spanText.length || startCharIdx >= endCharIdx) {
-            console.log(`❌ Invalid character indices: ${startCharIdx}-${endCharIdx} for text length ${spanText.length}`);
-            return;
-        }
-        
-        // Create a wrapper span to highlight only the specified portion
-        const wrapper = document.createElement('span');
-        wrapper.style.background = 'yellow';
-        wrapper.style.borderRadius = '4px';
-        
-        const beforeText = spanText.substring(0, startCharIdx);
-        const highlightedText = spanText.substring(startCharIdx, endCharIdx);
-        const afterText = spanText.substring(endCharIdx);
-        
-        wrapper.innerHTML = `${beforeText}<span style="background: yellow; border-radius: 4px;">${highlightedText}</span>${afterText}`;
-        
-        // Replace the original span content
-        targetDomSpan.innerHTML = wrapper.innerHTML;
-        
-        console.log(`✅ Highlighted span ${spanIdx} on page ${targetSpan.page}, characters ${startCharIdx}-${endCharIdx}`);
-        console.log(`📝 Text content: "${spanText}"`);
-        console.log(`🎯 Highlighted portion: "${highlightedText}"`);
-        console.log(`🎨 Applied styles: background=yellow, borderRadius=4px`);
+        console.log(`✅ Completed highlighting ${matchResults.length} spans`);
     };
 
     // Extract all text spans directly from PDF
@@ -130,12 +157,18 @@ const PDFFile = () => {
 
             console.log("allSpans after for loop", allSpans);
 
-            // Sort spans by page, then by position (top to bottom, left to right)
+            //sort spans py page number then by index
             allSpans.sort((a, b) => {
                 if (a.page !== b.page) return a.page - b.page;
-                if (Math.abs(a.y - b.y) > 5) return b.y - a.y; // Higher Y = lower on page in PDF coordinates
-                return a.x - b.x; // Left to right
+                return a.index - b.index;
             });
+
+           // Sort spans by page, then by position (top to bottom, left to right)
+            // allSpans.sort((a, b) => {
+            //     if (a.page !== b.page) return a.page - b.page;
+            //     if (Math.abs(a.y - b.y) > 5) return b.y - a.y; // Higher Y = lower on page in PDF coordinates
+            //     return a.x - b.x; // Left to right
+            // });
             
             setAllTextSpans(allSpans);
             console.log(`✅ Extracted and sorted ${allSpans.length} text spans from PDF`);
@@ -286,12 +319,12 @@ const PDFFile = () => {
             console.log("startIdx:", startIdx);
             console.log("endIdx:", endIdx);
             
-            // Highlight the span directly using the existing allTextSpans data
-            highlightSpan(spanIdx, startIdx, endIdx);
-            console.log(`✅ Highlighted span ${spanIdx} with character range ${startIdx}-${endIdx}`);
-            
             console.log(`📄 Page: ${span.page}, Span: ${span.index}, Start: ${startIdx}, End: ${endIdx}, Text: "${relevantText}"`);
         });
+        
+        // Highlight all spans at once using the complete matchResults array
+        highlightSpan(matchResults);
+        console.log(`✅ Highlighted all ${matchResults.length} spans from matchResults`);
         
         // Update state with the extracted sentence parts and found spans
         // setExtractedSentenceParts(sentenceParts);
